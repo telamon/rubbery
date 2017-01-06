@@ -2,56 +2,46 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Hello World!</title>
+    <title>Rubbery</title>
   </head>
-  <body ng-app="rubbery">
-    <section id="firewall" ng-controller="FirewallCtrl">
-      <button ng-click="ipc.send('firewall.getRules')">Fetch</button>
-      <pre>{{repo.firewall.tick}}
-      </pre>
-      <table>
-        <thead>
-          <tr><td>Name</td><td>Direction</td></tr>
-        </thead>
-        <tbody>
-          <tr ng-repeat="rule in repo.firewall.rules track by rule.id">
-            <td>{{rule.name}}</td>
-            <td>{{rule.direction}}</td>
-          </tr>
-        </tbody>
-      </table>
-    </section>
+  <body>
+    <div id="root"></div>
 
-    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
+    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+
     <script type="text/javascript">
-      const app = angular.module('rubbery',[]);
-
-      app.factory('ipc',function($rootScope){
-        const {ipcRenderer} = require('electron');
-        const repo = {
-          firewall: {
-            tick:1,
-            rules:[]
-          }
-        };
-
-        ipcRenderer.on('repo.firewall',(event,arg)=>{
-          repo.firewall=Object.assign({},arg);
-          $rootScope.$apply();
-        });
-
-        return {
-          repo: repo,
-          send: (ev,arg)=>{
-            ipcRenderer.send(ev,arg);
-          }
+      const {ipcRenderer} = require('electron');
+      const repo = {
+        firewall: {
+          tick:1,
+          rules:[]
         }
-      });
+      };
 
-      app.controller('FirewallCtrl',function($scope,ipc){
-        $scope.repo = ipc.repo;
-        ipc.send('firewall.getRules');
-      })
+      ipcRenderer.on('repo.firewall',(event,arg)=>{
+        console.debug('Firewall update:' , arg);
+        repo.firewall=Object.assign({},arg);
+        rerender(repo);
+      });
+      ipcRenderer.on('repo.nav',(event,arg)=>{
+        console.debug('Nav update:' , arg);
+        repo.nav=Object.assign({},arg);
+        rerender(repo);
+      });
+    </script>
+
+    <script type="text/babel" src="components/main.jsx"></script>
+
+    <script type="text/babel">
+      const ReactDOM = require('react-dom');
+      const React = require('react');
+      function rerender(repo){
+        ReactDOM.render(
+          (<Main state={repo} send={ipcRenderer.send}/>),
+          document.getElementById("root")
+        );
+      };
+      rerender({firewall:{},nav:{selected:'Home'}})
     </script>
   </body>
 </html>

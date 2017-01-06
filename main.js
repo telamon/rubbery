@@ -1,11 +1,11 @@
-const {app, BrowserWindow} = require('electron')
+const {app, BrowserWindow,Menu} = require('electron')
 const path = require('path')
 const url = require('url')
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let win
-
+Menu.setApplicationMenu(null); // disable menu
 function createWindow () {
   // Create the browser window.
   win = new BrowserWindow({width: 800, height: 600})
@@ -56,10 +56,45 @@ app.on('activate', () => {
 
 const {ipcMain} = require('electron');
 const {firewall} = require('../rubberglove/lib/rubberglove.js');
+const repo= {
+  nav:{
+    selected: 'Home',
+    loader:0
+  },
+  firewall:{
+    rules:[],
+    tick:1
+  }
+};
 
-ipcMain.on('firewall.getRules',(event,arg)=>{
-  firewall.getRules()
-  .then((rules)=>{
-    event.sender.send('repo.firewall',{rules:rules,tick: new Date()})
-  })
-})
+function sendState(event,key){
+  event.sender.send(`repo.${key}`,repo[key]);
+}
+const api = {
+  'nav.select': (event,arg)=>{
+    api['nav.setLoader'](event,true);
+    switch(arg){
+      case 'Firewall':
+        api['firewall.getRules'](event,null);
+        break;
+    }
+    repo.nav.selected = arg;
+    api['nav.setLoader'](event,false);
+  },
+  'firewall.getRules': (event,arg)=>{
+    api['nav.setLoader'](event,true);
+    firewall.getRules()
+    .then((rules)=>{
+      Object.assign(repo.firewall, {rules:rules,tick: new Date()})
+      api['nav.setLoader'](event,false);
+      sendState(event,'firewall');
+    })
+  },
+  'nav.setLoader':(event,arg)=>{
+    repo.nav.loader= repo.nav.loader + (arg ? 1 : -1);
+    sendState(event,'nav');
+  }
+}
+
+Object.keys(api).forEach((action)=>ipcMain.on(action,api[action]));
+
