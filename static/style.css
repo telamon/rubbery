@@ -1,0 +1,38 @@
+#loader{
+}
+body{
+	font-family: 'Calibri';
+}
+nav i{
+    font-size: 16px;
+    color: #737475;
+    vertical-align: middle;
+    margin-right: 10px;
+}
+
+#home h1{
+	text-align: center;
+}
+grid {
+	margin-left: auto;
+	margin-right: auto;
+}
+grid cell{
+	display: inline-block;
+	text-align: center;
+	padding: 7px;
+	margin: 7px;
+	min-width: 117px;
+	min-height: 117px;
+
+}
+grid cell i {
+	font-size: 36px;
+    color: #737475;
+    vertical-align: middle;
+}
+grid cell h3 {
+	margin-top: 0;
+	font-weight: lighter;
+	font-size: 16px;
+}

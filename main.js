@@ -72,12 +72,13 @@ function sendState(event,key){
 }
 const api = {
   'nav.select': (event,arg)=>{
+    console.log('nav.select',arg);
     api['nav.setLoader'](event,true);
-    switch(arg){
-      case 'Firewall':
-        api['firewall.getRules'](event,null);
-        break;
-    }
+    if(arg==='firewall' && !repo.firewall.rules.length) {
+      api['firewall.getRules'](event,null)
+    }else{
+      sendState(event,'firewall');
+    };
     repo.nav.selected = arg;
     api['nav.setLoader'](event,false);
   },

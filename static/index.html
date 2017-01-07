@@ -3,45 +3,138 @@
   <head>
     <meta charset="UTF-8">
     <title>Rubbery</title>
+    <link rel="stylesheet" href="lib/photon/dist/css/photon.min.css">
+    <link rel="stylesheet" href="lib/mdi/css/materialdesignicons.min.css">
+    <link rel="stylesheet" href="ripple.css">
+    <link rel="stylesheet" href="style.css">
   </head>
-  <body>
-    <div id="root"></div>
+  <body ng-app="rubbery" ng-controller="AppCtrl">
+    <div class="window">
+      <div class="window-content">
+        <div class="pane-group">
+          <div class="pane-sm sidebar">
+            <nav class="nav-group">
+              <h5 class="nav-group-title">General</h5>
 
-    <script src="https://unpkg.com/babel-standalone@6/babel.min.js"></script>
+              <a class="nav-group-item " 
+                ng-click="send('nav.select','home')"
+                ng-class="{ active: nav.selected=='home'}">
+                <i class="mdi mdi-apps"></i>Home
+              </a>
+              <a class="nav-group-item" 
+                ng-click="send('nav.select','annoyances')"
+                ng-class="{ active: nav.selected=='annoyances'}">
+                <span class="icon icon-attach"></span>Annoyances
+              </a>
+              <a class="nav-group-item" 
+                ng-click="send('nav.select','integrity')"
+                ng-class="{ active: nav.selected=='integrity'}">
+                <span class="icon icon-eye"></span>Integrity
+              </a>
+              <a class="nav-group-item" 
+                ng-click="send('nav.select','firewall')"
+                ng-class="{ active: nav.selected=='firewall'}">
+                <i class="mdi mdi-fire"></i>Firewall
+              </a>
 
+            </nav>
+          </div>
+
+          <div id="loader" class="pane" ng-if="nav.loader">
+            <div class='uil-ripple-css' style='transform:scale(0.6);'><div></div><div></div></div>
+          </div>
+
+          <div class="pane" ng-if="!nav.loader">
+
+            <section id="home" ng-controller="HomeCtrl" ng-if="nav.selected=='home'">
+              <h1>Rubbery</h1> 
+              <grid>
+                <cell ng-repeat="item in grid") ng-click="send('nav.select',item.target)">
+                  <i class="mdi mdi-{{item.icon}}"></i>
+                  <h3>{{item.title}}</h3>
+                </cell>
+              </grid>
+            </section>
+
+            <section id="firewall" ng-controller="FirewallCtrl" ng-if="nav.selected=='firewall'">
+            {{sort}}
+              <table class="table-striped">
+                <thead>
+                  <tr>
+                    <th ng-click="sort='enabled'" title="Enabled"><i class="mdi mdi-radioactive"></i></th>
+                    <th ng-click="sort='action'">Action</th>
+                    <th ng-click="sort='direction'">Direction</th>
+                    <th ng-click="sort='name'">Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr ng-repeat="rule in firewall.rules | orderBy: sort">
+                    <td><input type="checkbox" ng-model="rule.enabled"></td>
+                    <td>{{rule.action}}</td>
+                    <td>{{rule.direction}}</td>
+                    <td style="max-width: 300px; overflow: hidden;" title="{{rule.description}}">{{rule.name}}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </section>
+
+          </div>
+        </div>
+      </div>
+    </div>
+    <script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.5.6/angular.min.js"></script>
     <script type="text/javascript">
-      const {ipcRenderer} = require('electron');
-      const repo = {
-        firewall: {
-          tick:1,
-          rules:[]
+      const app = angular.module('rubbery',[]);
+
+      app.factory('ipc',function($rootScope){
+        const {ipcRenderer} = require('electron');
+        const repo = {
+          nav:{
+            selected: 'home'
+          },
+          firewall: {
+            tick:1,
+            rules:[]
+          }
+        };
+        let send = (ev,arg)=>{
+          ipcRenderer.send(ev,arg);
+        };
+
+        let transition= (noApply)=>{
+          Object.assign($rootScope,repo);
+          if(!noApply) $rootScope.$apply();
+        };
+        ipcRenderer.on('repo.firewall',(event,arg)=>{
+          console.debug('Firewall update:' , arg);
+          repo.firewall=Object.assign({},arg);
+          transition();
+        });
+        ipcRenderer.on('repo.nav',(event,arg)=>{
+          console.debug('Nav update:' , arg);
+          repo.nav=Object.assign({},arg);
+          transition();
+        });
+        $rootScope.send=send;
+        return {
+          repo: repo,
+          send: send,
+          transition: transition
         }
-      };
-
-      ipcRenderer.on('repo.firewall',(event,arg)=>{
-        console.debug('Firewall update:' , arg);
-        repo.firewall=Object.assign({},arg);
-        rerender(repo);
       });
-      ipcRenderer.on('repo.nav',(event,arg)=>{
-        console.debug('Nav update:' , arg);
-        repo.nav=Object.assign({},arg);
-        rerender(repo);
-      });
+      app.controller('AppCtrl',function($rootScope,ipc){
+        ipc.transition(true);
+      })
+      app.controller('FirewallCtrl',function($scope,ipc){
+        $scope.sort='enabled';
+      })
+      app.controller('HomeCtrl',function($scope){
+        $scope.grid = [
+          {title: 'Firewall',icon:'fire',target:'firewall'},
+          {title: 'Integrity',icon:'eye',target:'integrity'},
+          {title: 'Scheduled Tasks',icon:'fire',target:'scheduler'},
+          {title: 'Annoyances',icon:'attachment',target:'annoyances'},
+          {title: 'Account',icon:'account-multiple',target:'firewall'}
+        ];
+      })
     </script>
-
-    <script type="text/babel" src="components/main.jsx"></script>
-
-    <script type="text/babel">
-      const ReactDOM = require('react-dom');
-      const React = require('react');
-      function rerender(repo){
-        ReactDOM.render(
-          (<Main state={repo} send={ipcRenderer.send}/>),
-          document.getElementById("root")
-        );
-      };
-      rerender({firewall:{},nav:{selected:'Home'}})
-    </script>
-  </body>
-</html>
